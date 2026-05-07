@@ -29,41 +29,18 @@ jobs:
 
     - name: Build app with PyInstaller
       run: |
-        pyinstaller --onefile --windowed --name Rechnungsprogramm --icon=icon.icns main.py || pyinstaller --onefile --windowed --name Rechnungsprogramm main.py
+        pyinstaller --onedir --windowed --name Rechnungsprogramm main.py
 
-    - name: Create .app bundle
+    - name: Copy database to app
       run: |
-        mkdir -p Rechnungsprogramm.app/Contents/MacOS
-        mkdir -p Rechnungsprogramm.app/Contents/Resources
-        cp dist/Rechnungsprogramm Rechnungsprogramm.app/Contents/MacOS/
-        cp rechnungen.db Rechnungsprogramm.app/Contents/Resources/ 2>/dev/null || true
-        echo '<?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleExecutable</key>
-            <string>Rechnungsprogramm</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.rechnungsprogramm.app</string>
-            <key>CFBundleName</key>
-            <string>Rechnungsprogramm</string>
-            <key>CFBundleVersion</key>
-            <string>1.0</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>LSMinimumSystemVersion</key>
-            <string>10.12</string>
-        </dict>
-        </plist>' > Rechnungsprogramm.app/Contents/Info.plist
+        cp rechnungen.db dist/Rechnungsprogramm/
 
     - name: Create DMG
       run: |
-        hdiutil create -volname "Rechnungsprogramm" -srcfolder Rechnungsprogramm.app -ov -format UDZO Rechnungsprogramm.dmg
+        hdiutil create -volname "Rechnungsprogramm" -srcfolder dist/Rechnungsprogramm -ov -format UDZO Rechnungsprogramm.dmg
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
         name: Rechnungsprogramm-macOS
-        path: |
-          Rechnungsprogramm.dmg
-          Rechnungsprogramm.app/
+        path: Rechnungsprogramm.dmg
