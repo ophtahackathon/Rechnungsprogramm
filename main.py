@@ -99,12 +99,26 @@ class Rechnungsprogramm:
         self.mwst_text.grid(row=4, column=1)
         self.mwst_text.insert(0, firma[5] or 'Es wird keine Mehrwertsteuer erhoben')
 
-        ttk.Button(self.tab_firma, text="Speichern", command=self.save_firma).grid(row=5, column=0, columnspan=3)
+    def select_logo(self):
+        filename = filedialog.askopenfilename(title="Logo auswählen", filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif")])
+        if filename:
+            self.logo_path.set(filename)
 
     def select_vorlage(self):
         filename = filedialog.askopenfilename(title="Vorlage auswählen", filetypes=[("Word files", "*.docx")])
         if filename:
             self.vorlage_path.set(filename)
+
+    def save_firma(self):
+        name = self.firma_name.get()
+        adresse = self.firma_adresse.get("1.0", tk.END).strip()
+        logo = self.logo_path.get()
+        mwst = float(self.mwst_satz.get())
+        text = self.mwst_text.get()
+        self.c.execute("UPDATE firma SET name=?, adresse=?, logo_path=?, mwst_satz=?, mwst_text=? WHERE id=1",
+                       (name, adresse, logo, mwst, text))
+        self.conn.commit()
+        messagebox.showinfo("Erfolg", "Firmendaten gespeichert")
 
     def save_firma(self):
         name = self.firma_name.get()
