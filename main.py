@@ -8,6 +8,7 @@ from docx import Document
 from docx.shared import Inches
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkcalendar import DateEntry
 
 class Rechnungsprogramm:
     def __init__(self, root):
@@ -305,8 +306,9 @@ class Rechnungsprogramm:
         self.mandant_combo.grid(row=0, column=1)
         self.load_mandanten_combo()
 
-        ttk.Label(self.tab_termine, text="Datum (YYYY-MM-DD):").grid(row=1, column=0)
-        self.datum_entry = ttk.Entry(self.tab_termine)
+        ttk.Label(self.tab_termine, text="Datum (dd.mm.yyyy):").grid(row=1, column=0, sticky=tk.W)
+        self.datum_entry = DateEntry(self.tab_termine, year=datetime.now().year, month=datetime.now().month, 
+                                      day=datetime.now().day, dateformat='%d.%m.%Y', locale='de_DE')
         self.datum_entry.grid(row=1, column=1)
 
         # Leistungen auswählen (DropDown)
@@ -346,7 +348,7 @@ class Rechnungsprogramm:
             messagebox.showerror("Fehler", "Mandant auswählen")
             return
         mandant_id = int(mandant_str.split(' - ')[0])
-        datum = self.datum_entry.get()
+        datum = self.datum_entry.get_date().strftime('%Y-%m-%d')
         leistung_str = self.leistung_var.get()
         if not leistung_str:
             messagebox.showerror("Fehler", "Leistung auswählen")
@@ -390,12 +392,14 @@ class Rechnungsprogramm:
         self.rechnung_mandant_combo.grid(row=0, column=1)
         self.load_mandanten_combo_rechnung()
 
-        ttk.Label(self.tab_rechnungen, text="Von Datum:").grid(row=1, column=0)
-        self.von_datum = ttk.Entry(self.tab_rechnungen)
+        ttk.Label(self.tab_rechnungen, text="Von Datum (dd.mm.yyyy):").grid(row=1, column=0)
+        self.von_datum = DateEntry(self.tab_rechnungen, year=datetime.now().year, month=datetime.now().month,
+                                    day=1, dateformat='%d.%m.%Y', locale='de_DE')
         self.von_datum.grid(row=1, column=1)
 
-        ttk.Label(self.tab_rechnungen, text="Bis Datum:").grid(row=2, column=0)
-        self.bis_datum = ttk.Entry(self.tab_rechnungen)
+        ttk.Label(self.tab_rechnungen, text="Bis Datum (dd.mm.yyyy):").grid(row=2, column=0)
+        self.bis_datum = DateEntry(self.tab_rechnungen, year=datetime.now().year, month=datetime.now().month,
+                                    day=datetime.now().day, dateformat='%d.%m.%Y', locale='de_DE')
         self.bis_datum.grid(row=2, column=1)
 
         ttk.Button(self.tab_rechnungen, text="Rechnung erstellen", command=self.create_rechnung).grid(row=3, column=0, columnspan=2)
@@ -424,8 +428,8 @@ class Rechnungsprogramm:
             messagebox.showerror("Fehler", "Mandant auswählen")
             return
         mandant_id = int(mandant_str.split(' - ')[0])
-        von = self.von_datum.get()
-        bis = self.bis_datum.get()
+        von = self.von_datum.get_date().strftime('%Y-%m-%d')
+        bis = self.bis_datum.get_date().strftime('%Y-%m-%d')
 
         # Termine im Zeitraum holen
         self.c.execute("""
