@@ -5,7 +5,8 @@ from datetime import datetime
 from PIL import Image, ImageTk
 import os
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkcalendar import DateEntry
@@ -15,18 +16,18 @@ class Rechnungsprogramm:
         self.root = root
         self.root.title("Rechnungsprogramm")
         self.root.geometry("900x700")
-        self.root.configure(bg='#2c2c2c')  # Dunkler Hintergrund
 
-        # Stil für dunkles Design
+        # Elegante Schriftart wie auf trauerwerkstatt.berlin (Helvetica-ähnlich)
+        self.font = ('Helvetica', 10)
+        self.heading_font = ('Helvetica', 12, 'bold')
+
+        # Standard-Stile zurücksetzen (helles Design)
         style = ttk.Style()
-        style.configure('TNotebook', background='#2c2c2c', borderwidth=0)
-        style.configure('TNotebook.Tab', background='#404040', foreground='white', padding=[10, 5])
-        style.map('TNotebook.Tab', background=[('selected', '#555555')])
-        style.configure('TLabel', background='#2c2c2c', foreground='white')
-        style.configure('TEntry', fieldbackground='#404040', foreground='white')
-        style.configure('TButton', background='#555555', foreground='white')
-        style.configure('Treeview', background='#404040', foreground='white', fieldbackground='#404040')
-        style.configure('Treeview.Heading', background='#555555', foreground='white')
+        style.configure('TLabel', font=self.font)
+        style.configure('TEntry', font=self.font)
+        style.configure('TButton', font=self.font)
+        style.configure('Treeview', font=self.font)
+        style.configure('Treeview.Heading', font=self.heading_font)
 
         # Datenbank verbinden
         self.conn = sqlite3.connect('rechnungen.db')
