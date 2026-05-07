@@ -13,7 +13,19 @@ class Rechnungsprogramm:
     def __init__(self, root):
         self.root = root
         self.root.title("Rechnungsprogramm")
-        self.root.geometry("800x600")
+        self.root.geometry("900x700")
+        self.root.configure(bg='#2c2c2c')  # Dunkler Hintergrund
+
+        # Stil für dunkles Design
+        style = ttk.Style()
+        style.configure('TNotebook', background='#2c2c2c', borderwidth=0)
+        style.configure('TNotebook.Tab', background='#404040', foreground='white', padding=[10, 5])
+        style.map('TNotebook.Tab', background=[('selected', '#555555')])
+        style.configure('TLabel', background='#2c2c2c', foreground='white')
+        style.configure('TEntry', fieldbackground='#404040', foreground='white')
+        style.configure('TButton', background='#555555', foreground='white')
+        style.configure('Treeview', background='#404040', foreground='white', fieldbackground='#404040')
+        style.configure('Treeview.Heading', background='#555555', foreground='white')
 
         # Datenbank verbinden
         self.conn = sqlite3.connect('rechnungen.db')
@@ -21,12 +33,12 @@ class Rechnungsprogramm:
 
         # Tabs erstellen
         self.tab_control = ttk.Notebook(root)
-        self.tab_firma = ttk.Frame(self.tab_control)
-        self.tab_mandanten = ttk.Frame(self.tab_control)
-        self.tab_leistungen = ttk.Frame(self.tab_control)
-        self.tab_termine = ttk.Frame(self.tab_control)
-        self.tab_rechnungen = ttk.Frame(self.tab_control)
-        self.tab_statistik = ttk.Frame(self.tab_control)
+        self.tab_firma = ttk.Frame(self.tab_control, style='TFrame')
+        self.tab_mandanten = ttk.Frame(self.tab_control, style='TFrame')
+        self.tab_leistungen = ttk.Frame(self.tab_control, style='TFrame')
+        self.tab_termine = ttk.Frame(self.tab_control, style='TFrame')
+        self.tab_rechnungen = ttk.Frame(self.tab_control, style='TFrame')
+        self.tab_statistik = ttk.Frame(self.tab_control, style='TFrame')
 
         self.tab_control.add(self.tab_firma, text='Firma')
         self.tab_control.add(self.tab_mandanten, text='Mandanten')
@@ -50,42 +62,48 @@ class Rechnungsprogramm:
         self.c.execute("SELECT * FROM firma WHERE id=1")
         firma = self.c.fetchone()
         if not firma:
-            self.c.execute("INSERT INTO firma (id) VALUES (1)")
+            self.c.execute("INSERT INTO firma (id, name, adresse, logo_path, mwst_satz, mwst_text) VALUES (1, '', '', '', 19.0, 'Es wird keine Mehrwertsteuer erhoben')")
             self.conn.commit()
             firma = (1, '', '', '', 19.0, 'Es wird keine Mehrwertsteuer erhoben')
+        elif firma[1] is None or firma[2] is None or firma[3] is None or firma[5] is None:
+            # Falls Felder NULL sind, mit Defaults füllen
+            self.c.execute("UPDATE firma SET name=COALESCE(name, ''), adresse=COALESCE(adresse, ''), logo_path=COALESCE(logo_path, ''), mwst_text=COALESCE(mwst_text, 'Es wird keine Mehrwertsteuer erhoben') WHERE id=1")
+            self.conn.commit()
+            self.c.execute("SELECT * FROM firma WHERE id=1")
+            firma = self.c.fetchone()
 
         # Widgets
         ttk.Label(self.tab_firma, text="Firmenname:").grid(row=0, column=0, sticky=tk.W)
         self.firma_name = ttk.Entry(self.tab_firma)
         self.firma_name.grid(row=0, column=1)
-        self.firma_name.insert(0, firma[1])
+        self.firma_name.insert(0, firma[1] or '')
 
         ttk.Label(self.tab_firma, text="Adresse:").grid(row=1, column=0, sticky=tk.W)
         self.firma_adresse = tk.Text(self.tab_firma, height=3, width=30)
         self.firma_adresse.grid(row=1, column=1)
-        self.firma_adresse.insert(tk.END, firma[2])
+        self.firma_adresse.insert(tk.END, firma[2] or '')
 
         ttk.Label(self.tab_firma, text="Logo:").grid(row=2, column=0, sticky=tk.W)
-        self.logo_path = tk.StringVar(value=firma[3])
+        self.logo_path = tk.StringVar(value=firma[3] or '')
         ttk.Entry(self.tab_firma, textvariable=self.logo_path).grid(row=2, column=1)
         ttk.Button(self.tab_firma, text="Auswählen", command=self.select_logo).grid(row=2, column=2)
 
         ttk.Label(self.tab_firma, text="MwSt Satz (%):").grid(row=3, column=0, sticky=tk.W)
         self.mwst_satz = ttk.Entry(self.tab_firma)
         self.mwst_satz.grid(row=3, column=1)
-        self.mwst_satz.insert(0, str(firma[4]))
+        self.mwst_satz.insert(0, str(firma[4] or 19.0))
 
         ttk.Label(self.tab_firma, text="MwSt Text:").grid(row=4, column=0, sticky=tk.W)
         self.mwst_text = ttk.Entry(self.tab_firma)
         self.mwst_text.grid(row=4, column=1)
-        self.mwst_text.insert(0, firma[5])
+        self.mwst_text.insert(0, firma[5] or 'Es wird keine Mehrwertsteuer erhoben')
 
         ttk.Button(self.tab_firma, text="Speichern", command=self.save_firma).grid(row=5, column=0, columnspan=3)
 
-    def select_logo(self):
-        filename = filedialog.askopenfilename(title="Logo auswählen", filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif")])
+    def select_vorlage(self):
+        filename = filedialog.askopenfilename(title="Vorlage auswählen", filetypes=[("Word files", "*.docx")])
         if filename:
-            self.logo_path.set(filename)
+            self.vorlage_path.set(filename)
 
     def save_firma(self):
         name = self.firma_name.get()
@@ -291,11 +309,12 @@ class Rechnungsprogramm:
         self.datum_entry = ttk.Entry(self.tab_termine)
         self.datum_entry.grid(row=1, column=1)
 
-        # Leistungen für diesen Termin
-        ttk.Label(self.tab_termine, text="Leistungen:").grid(row=2, column=0)
-        self.leistungen_listbox = tk.Listbox(self.tab_termine, selectmode=tk.MULTIPLE)
-        self.leistungen_listbox.grid(row=2, column=1)
-        self.load_leistungen_listbox()
+        # Leistungen auswählen (DropDown)
+        ttk.Label(self.tab_termine, text="Leistung:").grid(row=2, column=0, sticky=tk.W)
+        self.leistung_var = tk.StringVar()
+        self.leistung_combo = ttk.Combobox(self.tab_termine, textvariable=self.leistung_var)
+        self.leistung_combo.grid(row=2, column=1)
+        self.load_leistungen_combo()
 
         ttk.Button(self.tab_termine, text="Termin hinzufügen", command=self.add_termin).grid(row=3, column=0, columnspan=2)
 
@@ -316,11 +335,10 @@ class Rechnungsprogramm:
         mandanten = self.c.fetchall()
         self.mandant_combo['values'] = [f"{m[0]} - {m[1]}" for m in mandanten]
 
-    def load_leistungen_listbox(self):
-        self.leistungen_listbox.delete(0, tk.END)
+    def load_leistungen_combo(self):
         self.c.execute("SELECT id, kuerzel FROM leistungen")
-        for row in self.c.fetchall():
-            self.leistungen_listbox.insert(tk.END, f"{row[0]} - {row[1]}")
+        leistungen = self.c.fetchall()
+        self.leistung_combo['values'] = [f"{l[0]} - {l[1]}" for l in leistungen]
 
     def add_termin(self):
         mandant_str = self.mandant_var.get()
@@ -329,20 +347,22 @@ class Rechnungsprogramm:
             return
         mandant_id = int(mandant_str.split(' - ')[0])
         datum = self.datum_entry.get()
-        selected_leistungen = self.leistungen_listbox.curselection()
-        if not selected_leistungen:
-            messagebox.showerror("Fehler", "Leistungen auswählen")
+        leistung_str = self.leistung_var.get()
+        if not leistung_str:
+            messagebox.showerror("Fehler", "Leistung auswählen")
             return
+        leistung_id = int(leistung_str.split(' - ')[0])
 
         # Termin einfügen
         self.c.execute("INSERT INTO termine (mandant_id, datum) VALUES (?, ?)", (mandant_id, datum))
         termin_id = self.c.lastrowid
 
-        # Leistungen zuordnen
-        for idx in selected_leistungen:
-            leistung_str = self.leistungen_listbox.get(idx)
-            leistung_id = int(leistung_str.split(' - ')[0])
-            self.c.execute("INSERT INTO termin_leistungen (termin_id, leistung_id) VALUES (?, ?)", (termin_id, leistung_id))
+        # Leistung zuordnen
+        self.c.execute("INSERT INTO termin_leistungen (termin_id, leistung_id) VALUES (?, ?)", (termin_id, leistung_id))
+
+        self.conn.commit()
+        self.load_termine()
+        messagebox.showinfo("Erfolg", "Termin hinzugefügt")
 
         self.conn.commit()
         self.load_termine()
@@ -455,6 +475,15 @@ class Rechnungsprogramm:
             self.rechnungen_tree.insert("", tk.END, values=row)
 
     def export_rechnung(self, rechnung_id):
+        vorlage_path = self.vorlage_path.get()
+        if vorlage_path:
+            # Vorlage laden
+            doc = Document(vorlage_path)
+        else:
+            # Neue Vorlage erstellen
+            doc = Document()
+            doc.add_heading('Rechnung', 0)
+
         # Firma Daten
         self.c.execute("SELECT * FROM firma WHERE id=1")
         firma = self.c.fetchone()
@@ -475,47 +504,52 @@ class Rechnungsprogramm:
         """, (rechnung_id,))
         positionen = self.c.fetchall()
 
-        # Word Dokument erstellen
-        doc = Document()
-        doc.add_heading('Rechnung', 0)
-
-        # Firma
-        doc.add_paragraph(f"{firma[1]}")
-        doc.add_paragraph(f"{firma[2]}")
-        if firma[3]:
-            doc.add_picture(firma[3], width=Inches(1.0))
-
-        # Mandant
-        doc.add_paragraph(f"Mandant: {mandant[1]}")
-        doc.add_paragraph(f"{mandant[2]}")
-
-        # Zeitraum
-        doc.add_paragraph(f"Zeitraum: {rechnung[2]} bis {rechnung[3]}")
-
-        # Tabelle für Positionen
-        table = doc.add_table(rows=1, cols=4)
-        hdr_cells = table.rows[0].cells
-        hdr_cells[0].text = 'Beschreibung'
-        hdr_cells[1].text = 'Anzahl'
-        hdr_cells[2].text = 'Betrag'
-        hdr_cells[3].text = 'Gesamt'
-
-        for p in positionen:
-            row_cells = table.add_row().cells
-            row_cells[0].text = p[0]
-            row_cells[1].text = str(p[1])
-            row_cells[2].text = f"{p[2]:.2f} €"
-            row_cells[3].text = f"{p[1] * p[2]:.2f} €"
-
-        # Summen
-        doc.add_paragraph(f"Netto: {rechnung[4]:.2f} €")
-        if rechnung[5] > 0:
-            doc.add_paragraph(f"MwSt ({firma[4]}%): {rechnung[5]:.2f} €")
+        # Platzhalter ersetzen oder anfügen
+        if vorlage_path:
+            # Suche nach Platzhaltern und ersetze
+            for paragraph in doc.paragraphs:
+                if '{{FIRMA_NAME}}' in paragraph.text:
+                    paragraph.text = paragraph.text.replace('{{FIRMA_NAME}}', firma[1] or '')
+                if '{{FIRMA_ADRESSE}}' in paragraph.text:
+                    paragraph.text = paragraph.text.replace('{{FIRMA_ADRESSE}}', firma[2] or '')
+                if '{{MANDANT_NAME}}' in paragraph.text:
+                    paragraph.text = paragraph.text.replace('{{MANDANT_NAME}}', mandant[1] or '')
+                if '{{MANDANT_ADRESSE}}' in paragraph.text:
+                    paragraph.text = paragraph.text.replace('{{MANDANT_ADRESSE}}', mandant[2] or '')
+                # Weitere Platzhalter hinzufügen...
         else:
-            doc.add_paragraph(firma[5])
-        doc.add_paragraph(f"Brutto: {rechnung[6]:.2f} €")
+            # Standard-Rechnung erstellen
+            doc.add_paragraph(f"{firma[1]}")
+            doc.add_paragraph(f"{firma[2]}")
+            if firma[3]:
+                doc.add_picture(firma[3], width=Inches(1.0))
 
-        # Speichern
+            doc.add_paragraph(f"Mandant: {mandant[1]}")
+            doc.add_paragraph(f"{mandant[2]}")
+
+            doc.add_paragraph(f"Zeitraum: {rechnung[2]} bis {rechnung[3]}")
+
+            table = doc.add_table(rows=1, cols=4)
+            hdr_cells = table.rows[0].cells
+            hdr_cells[0].text = 'Beschreibung'
+            hdr_cells[1].text = 'Anzahl'
+            hdr_cells[2].text = 'Betrag'
+            hdr_cells[3].text = 'Gesamt'
+
+            for p in positionen:
+                row_cells = table.add_row().cells
+                row_cells[0].text = p[0]
+                row_cells[1].text = str(p[1])
+                row_cells[2].text = f"{p[2]:.2f} €"
+                row_cells[3].text = f"{p[1] * p[2]:.2f} €"
+
+            doc.add_paragraph(f"Netto: {rechnung[4]:.2f} €")
+            if rechnung[5] > 0:
+                doc.add_paragraph(f"MwSt ({firma[4]}%): {rechnung[5]:.2f} €")
+            else:
+                doc.add_paragraph(firma[5])
+            doc.add_paragraph(f"Brutto: {rechnung[6]:.2f} €")
+
         filename = f"Rechnung_{rechnung_id}.docx"
         doc.save(filename)
         messagebox.showinfo("Exportiert", f"Rechnung als {filename} gespeichert")
@@ -526,7 +560,7 @@ class Rechnungsprogramm:
         self.zeitraum_var = tk.StringVar()
         zeitraum_combo = ttk.Combobox(self.tab_statistik, textvariable=self.zeitraum_var, values=["Monat", "Quartal", "Jahr"])
         zeitraum_combo.grid(row=0, column=1)
-        zeitraum_combo.current(0)
+        zeitraum_combo.current(0), "Umsatz pro Mandant"
 
         ttk.Label(self.tab_statistik, text="Wert:").grid(row=1, column=0)
         self.zeitraum_wert = ttk.Entry(self.tab_statistik)
